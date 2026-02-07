@@ -1,6 +1,7 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+import pymysql
 
 
 app = Flask(__name__)
@@ -42,6 +43,22 @@ def create_dsa_table():
     """)
     conn.commit()
     conn.close()
+
+def create_aptitude_table():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS aptitude (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            topic TEXT,
+            question TEXT,
+            status TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 # -----------------------------------------
 
 
@@ -115,13 +132,98 @@ def logout():
     session.pop("user", None)
     return redirect(url_for("login"))
 
-@app.route('/dsa')
+@app.route("/dsa")
 def dsa():
-    return render_template('dsa.html')
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT topic, status FROM dsa_problems WHERE username = ?",
+        (session['user'],)
+    )
+    problems = cursor.fetchall()
+
+    solved = sum(1 for p in problems if p[1] == "Solved")
+    total = len(problems)
+    pending = total - solved
+
+    conn.close()
+
+    return render_template(
+        "dsa.html",
+        problems=problems,
+        solved=solved,
+        pending=pending,
+        total=total
+    )
+
 
 @app.route('/aptitude')
 def aptitude():
-    return "<h2>Aptitude - Coming Soon</h2>"
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT id, topic, question, status FROM aptitude WHERE username=?",
+        (session['user'],)
+    )
+    questions = cursor.fetchall()
+
+    total = len(questions)
+    solved = sum(1 for q in questions if q[3] == 'Solved')
+    pending = total - solved
+
+    conn.close()
+
+    return render_template(
+        'aptitude.html',
+        questions=questions,
+        total=total,
+        solved=solved,
+        pending=pending
+    )
+
+@app.route("/add_aptitude", methods=["POST"])
+def add_aptitude():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    topic = request.form['topic']
+    question = request.form['question']
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO aptitude (username, topic, question, status) VALUES (?, ?, ?, ?)",
+        (session['user'], topic, question, "Pending")
+    )
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('aptitude'))
+
+
+@app.route('/toggle/<int:id>')
+def toggle(id):
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT status FROM aptitude WHERE id=%s", (id,))
+    status = cur.fetchone()[0]
+
+    new_status = "Solved" if status == "Pending" else "Pending"
+
+    cur.execute("UPDATE aptitude SET status=%s WHERE id=%s", (new_status, id))
+    mysql.connection.commit()
+    cur.close()
+
+    return redirect(url_for('aptitude'))
+
 
 @app.route('/core')
 def core():
@@ -265,6 +367,8 @@ def delete_problem(problem_id):
 
 create_users_table()
 create_dsa_table()
+create_aptitude_table()
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,28 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="../static/css/style.css">
-    <!-- <script src="../static/js/script.js"></script> -->
-    <title>DSA Tracker</title>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="../static/css/style.css">
+    <title>DSA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dsa.css') }}">
+
 </head>
 <body>
 
-<h2>DSA Practice Tracker</h2>
+<div class="container">
 
-<table>
-    <tr>
-        <th>Topic</th>
-        <th>Difficulty</th>
-        <th>Status</th>
-    </tr>
-    <tr>
-        <td>Arrays</td>
-        <td>Easy</td>
-        <td>Solved</td>
-    </tr>
-</table>
+    <!-- HEADER -->
+    <h1>📊 DSA Practice Tracker</h1>
+    <p class="subtitle">Track your preparation like a pro</p>
+
+    <!-- STATS SECTION -->
+    <div class="cards">
+        <div class="card">
+            <h2>✅ {{ solved }}</h2>
+            <p>Solved Problems</p>
+        </div>
+        <div class="card">
+            <h2>⏳ {{ pending }} </h2>
+            <p>Pending Problems</p>
+        </div>
+        <div class="card">
+            <h2>📚 {{ total }}</h2>
+            <p>Total Problems</p>
+        </div>
+    </div>
+
+    <!-- ADD NEW PROBLEM FORM -->
+    <h2>Add New Problem</h2>
+
+<form action="{{ url_for('add_problem') }}" method="POST">
+    <input 
+        type="text" 
+        name="topic" 
+        placeholder="Topic Name (e.g. Arrays)" 
+        required
+    >
+
+    <input 
+        type="text" 
+        name="problem" 
+        placeholder="Problem Name (e.g. Two Sum)" 
+        required
+    >
+
+    <button type="submit">Add Problem</button>
+</form>
+
+
+    <!-- TABLE -->
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Topic</th>
+                    <th>Difficulty</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in dsa_data %}
+            <tr>
+                <td>{{ item.topic }}</td>
+                <td>
+                    <span class="badge {{ item.difficulty | lower }}">
+                        {{ item.difficulty }}
+                    </span>
+                </td>
+                <td>
+                    <span class="status {% if item.status == 'Solved' %}solved{% endif %}">
+                    {{ item.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
 
 </body>
 </html>
